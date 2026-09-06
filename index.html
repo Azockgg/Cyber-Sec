@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hashcat & John the Ripper — Cheatsheet</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f6f8fa;
+    --bg-inset: #f6f8fa;
+    --border: #d0d7de;
+    --border-muted: #d8dee4;
+    --text: #1f2328;
+    --text-muted: #656d76;
+    --link: #0969da;
+    --accent: #0969da;
+    --code-bg: #f6f8fa;
+    --code-text: #1f2328;
+    --btn-bg: #f6f8fa;
+    --btn-hover: #eaeef2;
+    --header-bg: #24292f;
+    --header-text: #ffffff;
+    --success: #1a7f37;
+    --tag-bg: #ddf4ff;
+    --tag-text: #0969da;
+    --shadow: 0 1px 3px rgba(31,35,40,0.12);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-inset: #010409;
+    --border: #30363d;
+    --border-muted: #21262d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --link: #2f81f7;
+    --accent: #2f81f7;
+    --code-bg: #161b22;
+    --code-text: #e6edf3;
+    --btn-bg: #21262d;
+    --btn-hover: #30363d;
+    --header-bg: #161b22;
+    --header-text: #e6edf3;
+    --success: #3fb950;
+    --tag-bg: #388bfd26;
+    --tag-text: #2f81f7;
+    --shadow: 0 0 0 1px #30363d;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    scroll-padding-top: 80px;
+  }
+  code, pre, .cmd, kbd {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  /* Header */
+  header.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--header-bg);
+    color: var(--header-text);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+  }
+  .topbar .logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+  .topbar svg { fill: var(--header-text); }
+  .topbar .repo-path { color: var(--header-text); opacity: .85; font-weight: 400; }
+  .topbar .repo-path b { font-weight: 600; opacity: 1; }
+  .topbar .spacer { flex: 1; }
+  .theme-toggle {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--header-text);
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.1); }
+  :root[data-theme="dark"] .theme-toggle { border-color: var(--border); }
+  :root[data-theme="dark"] .theme-toggle:hover { background: var(--btn-hover); }
+
+  /* Layout */
+  .layout { display: flex; max-width: 1280px; margin: 0 auto; align-items: flex-start; }
+  nav.sidebar {
+    position: sticky;
+    top: 57px;
+    width: 260px;
+    flex-shrink: 0;
+    height: calc(100vh - 57px);
+    overflow-y: auto;
+    padding: 24px 16px 40px;
+    border-right: 1px solid var(--border-muted);
+  }
+  nav.sidebar h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    margin: 20px 8px 8px;
+  }
+  nav.sidebar h3:first-child { margin-top: 0; }
+  nav.sidebar a {
+    display: block;
+    padding: 5px 8px;
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  nav.sidebar a:hover { background: var(--bg-secondary); }
+  nav.sidebar a.sub { padding-left: 20px; font-size: 13px; color: var(--text-muted); }
+  nav.sidebar a.active { background: var(--tag-bg); color: var(--tag-text); font-weight: 600; }
+
+  main {
+    flex: 1;
+    min-width: 0;
+    padding: 32px 40px 80px;
+    max-width: 900px;
+  }
+
+  /* Readme-style intro card */
+  .intro {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    background: var(--bg);
+    box-shadow: var(--shadow);
+  }
+  .intro h1 { margin: 0 0 4px; font-size: 28px; display: flex; align-items: center; gap: 10px; }
+  .intro p { margin: 8px 0 0; color: var(--text-muted); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .badge {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-weight: 500;
+  }
+
+  section { margin-bottom: 48px; scroll-margin-top: 72px; }
+  h2 {
+    font-size: 24px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-muted);
+    margin: 0 0 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h3.subhead {
+    font-size: 18px;
+    margin: 32px 0 12px;
+    scroll-margin-top: 72px;
+  }
+  .lead { color: var(--text-muted); margin-top: -8px; margin-bottom: 20px; }
+
+  /* Command block */
+  .cmd-row {
+    margin: 14px 0;
+  }
+  .cmd-label {
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .cmd-label .flag {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 12.5px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    padding: 1px 7px;
+    border-radius: 6px;
+    margin-right: 8px;
+    font-weight: 600;
+  }
+  .cmd-label .muted { color: var(--text-muted); }
+  .cmd-box {
+    display: flex;
+    align-items: stretch;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .cmd-box + .cmd-box { margin-top: 8px; }
+  .cmd-box pre {
+    margin: 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    flex: 1;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--code-text);
+  }
+  .cmd-box pre .tok-cmd { color: var(--accent); font-weight: 600; }
+  .cmd-box pre .tok-flag { color: var(--success); }
+  .cmd-box pre .tok-str { color: #953800; }
+  :root[data-theme="dark"] .cmd-box pre .tok-str { color: #ffa657; }
+  .copy-btn {
+    flex-shrink: 0;
+    border: none;
+    border-left: 1px solid var(--border);
+    background: var(--btn-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    transition: background .15s, color .15s;
+  }
+  .copy-btn:hover { background: var(--btn-hover); color: var(--text); }
+  .copy-btn.copied { color: var(--success); }
+  .copy-btn svg { width: 15px; height: 15px; fill: currentColor; }
+  .copy-btn .label { white-space: nowrap; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 16px 0; border: 1px solid var(--border); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 14px; border-bottom: 1px solid var(--border-muted); }
+  th { background: var(--bg-secondary); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td code, td .ic {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-muted);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--bg-secondary);
+    padding: 10px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .note b { color: var(--text); }
+
+  a.anchor { color: var(--text-muted); text-decoration: none; font-weight: 400; opacity: 0; }
+  h2:hover a.anchor, h3:hover a.anchor { opacity: 1; }
+
+  footer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 40px 60px;
+    border-top: 1px solid var(--border-muted);
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    z-index: 200;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast svg { fill: var(--success); width: 16px; height: 16px; }
+
+  .menu-btn { display: none; }
+
+  @media (max-width: 900px) {
+    nav.sidebar {
+      position: fixed;
+      left: 0; top: 57px;
+      background: var(--bg);
+      z-index: 90;
+      transform: translateX(-100%);
+      transition: transform .2s;
+      box-shadow: var(--shadow);
+      width: 280px;
+    }
+    nav.sidebar.open { transform: translateX(0); }
+    main { padding: 24px 18px 60px; }
+    .menu-btn {
+      display: flex; align-items: center;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.25);
+      color: var(--header-text);
+      border-radius: 6px; padding: 5px 9px; cursor: pointer;
+    }
+    .menu-btn svg { fill: var(--header-text); width: 18px; height: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="menu-btn" id="menuBtn" aria-label="Menü">
+    <svg viewBox="0 0 16 16"><path d="M1 2.75A.75.75 0 011.75 2h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 2.75zm0 5A.75.75 0 011.75 7h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 7.75zM1.75 12h12.5a.75.75 0 010 1.5H1.75a.75.75 0 010-1.5z"/></svg>
+  </button>
+  <div class="logo">
+    <svg viewBox="0 0 16 16" width="22" height="22"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    <span class="repo-path"><b>practical-it</b> / cheatsheet</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="theme-toggle" id="themeToggle">
+    <svg id="themeIcon" width="15" height="15" viewBox="0 0 16 16"></svg>
+    <span id="themeLabel">Dark</span>
+  </button>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <h3>Hashcat</h3>
+    <a href="#identify">Hash identifizieren</a>
+    <a href="#attack-modes">Angriffsmodi (-a)</a>
+    <a href="#masks" class="sub">Masken-Parameter</a>
+    <a href="#advanced">Erweiterte Befehle</a>
+    <a href="#rules">Regeln (Rules)</a>
+    <a href="#wordlists">Wörterlisten</a>
+    <h3>John the Ripper</h3>
+    <a href="#john">Grundlagen & *2john</a>
+  </nav>
+
+  <main>
+    <div class="intro">
+      <h1>🔐 Password-Cracking Cheatsheet</h1>
+      <p>Kompakte Referenz für <b>Hashcat</b> und <b>John the Ripper</b> — Angriffsmodi, Masken, Regeln und Wörterlisten. Jeder Befehl hat einen <b>Copy</b>-Knopf.</p>
+      <div class="badges">
+        <span class="badge">Hashcat</span>
+        <span class="badge">John the Ripper</span>
+        <span class="badge">Masken & Rules</span>
+        <span class="badge">Wordlists</span>
+      </div>
+    </div>
+
+    <!-- ============ IDENTIFY ============ -->
+    <section id="identify">
+      <h2>Hash identifizieren <a href="#identify" class="anchor">#</a></h2>
+      <p class="lead">Ermittelt den Hash-Typ und gibt den passenden Hashcat-Modus (<code>-m</code>) aus.</p>
+      <div class="cmd-row">
+        <div class="cmd-label">Hash-Typ / Modus bestimmen</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">--identify</span> hash.txt</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ATTACK MODES ============ -->
+    <section id="attack-modes">
+      <h2>Angriffsmodi <code>-a</code> <a href="#attack-modes" class="anchor">#</a></h2>
+      <p class="lead">Der Parameter <code>-a</code> legt die Angriffsart fest.</p>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 0</span>Straight — Wortlisten-Angriff</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 0 hash.txt wortliste.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 1</span>Combinator — zwei Wortlisten verknüpfen</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 1 hash.txt links.txt rechts.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 3</span>Brute-Force / Mask — Masken-Angriff</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 3 hash.txt <span class="tok-str">'?u?l?l?l?l?d?d'</span></pre>
+        </div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 3 hash.txt <span class="tok-str">'?1?1?1?1'</span> <span class="tok-flag">-1</span> <span class="tok-str">'?l?d'</span> <span class="tok-flag">--increment</span></pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 6</span>Hybrid Wordlist + Mask — Wort + angehängte Maske</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 6 hash.txt wortliste.txt <span class="tok-str">'?d?d?d?d'</span></pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 7</span>Hybrid Mask + Wordlist — Maske + vorangestelltes Wort</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 7 hash.txt <span class="tok-str">'?d?d?d?d'</span> wortliste.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label"><span class="flag">-a 9</span>Association — Hash mit Hinweis + Regeln</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 9 hash.txt wortliste.txt <span class="tok-flag">-r</span> rules/best64.rule</pre>
+        </div>
+      </div>
+
+      <!-- MASKS -->
+      <h3 class="subhead" id="masks">Masken-Parameter <a href="#masks" class="anchor">#</a></h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Platzhalter</th><th>Zeichensatz</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ic">?l</span></td><td>Kleinbuchstaben <code>abcdefghijklmnopqrstuvwxyz</code></td></tr>
+            <tr><td><span class="ic">?u</span></td><td>Großbuchstaben <code>ABCDEFGHIJKLMNOPQRSTUVWXYZ</code></td></tr>
+            <tr><td><span class="ic">?d</span></td><td>Ziffern <code>0123456789</code></td></tr>
+            <tr><td><span class="ic">?s</span></td><td>Sonderzeichen <code>!"#$%&'()*+,-./:;&lt;=&gt;?@[\]^_{|}~`</code></td></tr>
+            <tr><td><span class="ic">?a</span></td><td>Alle druckbaren Zeichen (<code>?l</code> + <code>?u</code> + <code>?d</code> + <code>?s</code>)</td></tr>
+            <tr><td><span class="ic">?b</span></td><td>Alle möglichen Bytes <code>0x00 – 0xff</code></td></tr>
+            <tr><td><span class="ic">?h</span></td><td>Hexadezimal klein <code>0123456789abcdef</code></td></tr>
+            <tr><td><span class="ic">?H</span></td><td>Hexadezimal groß <code>0123456789ABCDEF</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Custom-Charsets:</b> Mit <code>-1</code>, <code>-2</code>, <code>-3</code>, <code>-4</code> lassen sich eigene Zeichensätze definieren und als <code>?1</code>–<code>?4</code> in der Maske verwenden.</div>
+    </section>
+
+    <!-- ============ ADVANCED ============ -->
+    <section id="advanced">
+      <h2>Erweiterte Befehle <a href="#advanced" class="anchor">#</a></h2>
+      <p class="lead">Regeln direkt im Combinator- bzw. Hybrid-Angriff auf einzelne Wörter anwenden.</p>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Combinator mit <span class="muted">Rules pro Seite</span> (<code>-j</code> = links, <code>-k</code> = rechts)</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 1 <span class="tok-flag">--stdout</span> <span class="tok-flag">-j</span> <span class="tok-str">'c$1'</span> <span class="tok-flag">-k</span> <span class="tok-str">'u$!'</span> links.txt rechts.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Hybrid mit Custom-Charset + <span class="muted">Increment 4–6</span></div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">-a</span> 6 <span class="tok-flag">-1</span> <span class="tok-str">'$€!'</span> star.hashcat jahre_staedte.txt <span class="tok-str">'?1?1?1?1?1?1'</span> <span class="tok-flag">--increment</span> <span class="tok-flag">--increment-min</span> 4 <span class="tok-flag">--increment-max</span> 6</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RULES ============ -->
+    <section id="rules">
+      <h2>Regeln (Rules) <a href="#rules" class="anchor">#</a></h2>
+      <p class="lead">Regel-Funktionen zur Wort-Manipulation — nutzbar mit <code>-r datei.rule</code> oder inline über <code>-j</code>/<code>-k</code>.</p>
+
+      <h3 class="subhead">Groß-/Kleinschreibung (Case)</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">l</span></td><td>alles klein</td></tr>
+        <tr><td><span class="ic">u</span></td><td>alles groß</td></tr>
+        <tr><td><span class="ic">c</span></td><td>capitalize (erster Buchstabe groß)</td></tr>
+        <tr><td><span class="ic">C</span></td><td>invert capitalize (erster klein, Rest groß)</td></tr>
+        <tr><td><span class="ic">t</span></td><td>toggle all (Groß/Klein umkehren)</td></tr>
+        <tr><td><span class="ic">TN</span></td><td>toggle an Position N</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Nichts / Umkehren</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">:</span></td><td>nichts tun</td></tr>
+        <tr><td><span class="ic">r</span></td><td>Wort umkehren (abc → cba)</td></tr>
+        <tr><td><span class="ic">d</span></td><td>verdoppeln (abc → abcabc)</td></tr>
+        <tr><td><span class="ic">f</span></td><td>reflektieren (abc → abccba)</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Anhängen / Voranstellen / Löschen</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">$X</span></td><td>Zeichen X anhängen</td></tr>
+        <tr><td><span class="ic">^X</span></td><td>Zeichen X voranstellen</td></tr>
+        <tr><td><span class="ic">[</span></td><td>erstes Zeichen löschen</td></tr>
+        <tr><td><span class="ic">]</span></td><td>letztes Zeichen löschen</td></tr>
+        <tr><td><span class="ic">DN</span></td><td>Zeichen an Position N löschen</td></tr>
+        <tr><td><span class="ic">xNM</span></td><td>M Zeichen ab Position N ausschneiden</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Einfügen / Überschreiben</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">iNX</span></td><td>Zeichen X an Position N einfügen</td></tr>
+        <tr><td><span class="ic">oNX</span></td><td>Zeichen an Position N mit X überschreiben</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Rotieren / Verschieben / Duplizieren</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">{</span></td><td>nach links rotieren</td></tr>
+        <tr><td><span class="ic">}</span></td><td>nach rechts rotieren</td></tr>
+        <tr><td><span class="ic">pN</span></td><td>Wort N-mal duplizieren</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Länge / Kürzen</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">'N</span></td><td>Wort nach N Zeichen abschneiden (truncate)</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Ersetzen (Substitution)</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">sXY</span></td><td>alle X durch Y ersetzen (z. B. <code>sa@</code> → alle a werden @)</td></tr>
+        <tr><td><span class="ic">@X</span></td><td>alle Vorkommen von X löschen</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">Zeichen-basierte Manipulation (positionsweise)</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">zN</span></td><td>erstes Zeichen N-mal duplizieren</td></tr>
+        <tr><td><span class="ic">ZN</span></td><td>letztes Zeichen N-mal duplizieren</td></tr>
+        <tr><td><span class="ic">LN</span></td><td>bitweise Shift links an Position N</td></tr>
+        <tr><td><span class="ic">RN</span></td><td>bitweise Shift rechts an Position N</td></tr>
+        <tr><td><span class="ic">+N</span></td><td>ASCII-Wert an Position N erhöhen</td></tr>
+        <tr><td><span class="ic">-N</span></td><td>ASCII-Wert an Position N verringern</td></tr>
+      </tbody></table></div>
+
+      <h3 class="subhead">„Leet"-artige und weitere</h3>
+      <div class="table-wrap"><table><tbody>
+        <tr><td><span class="ic">k</span></td><td>erste zwei Zeichen tauschen</td></tr>
+        <tr><td><span class="ic">K</span></td><td>letzte zwei Zeichen tauschen</td></tr>
+        <tr><td><span class="ic">*NM</span></td><td>Zeichen an Position N und M tauschen</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <!-- ============ WORDLISTS ============ -->
+    <section id="wordlists">
+      <h2>Wörterlisten <a href="#wordlists" class="anchor">#</a></h2>
+      <p class="lead">Listen kombinieren, erweitern, durchsuchen und filtern.</p>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Zwei Listen der Reihe nach kombinieren</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">--stdout</span> <span class="tok-flag">-a</span> 1 liste1.txt liste2.txt &gt; kombiniert.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Liste mit sich selbst kombinieren <span class="muted">(-j links, -k rechts)</span></div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">--stdout</span> <span class="tok-flag">-a</span> 1 <span class="tok-flag">-j</span> l <span class="tok-flag">-k</span> l list.txt list.txt &gt; staedte.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Kombinieren mit Rules pro Seite</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">--stdout</span> <span class="tok-flag">-a</span> 1 <span class="tok-flag">-j</span> <span class="tok-str">'c$1'</span> <span class="tok-flag">-k</span> <span class="tok-str">'u$!'</span> links.txt rechts.txt &gt; out.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Kombinieren + nach Mindestlänge filtern (≥ 8)</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">hashcat</span> <span class="tok-flag">--stdout</span> <span class="tok-flag">-a</span> 1 wortliste.txt wortliste.txt | <span class="tok-cmd">awk</span> <span class="tok-str">'length &gt;= 8'</span> &gt; out.txt</pre>
+        </div>
+      </div>
+
+      <h3 class="subhead">Durchsuchen / Filtern mit grep</h3>
+      <div class="cmd-row">
+        <div class="cmd-label">Nach mehreren Wörtern filtern <span class="muted">(-w ganzes Wort, -i Groß/Klein egal)</span></div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">grep</span> <span class="tok-flag">-E</span> <span class="tok-flag">-w</span> <span class="tok-flag">-i</span> <span class="tok-str">'Haus|Maus'</span> wortliste.txt &gt; gefiltert.txt</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ JOHN ============ -->
+    <section id="john">
+      <h2>John the Ripper <a href="#john" class="anchor">#</a></h2>
+      <p class="lead">Hashes aus Dateien extrahieren mit den <code>*2john</code>-Tools.</p>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Dateityp herausfinden</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">file</span> name.txt</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Passendes <code>*2john</code>-Tool finden <span class="muted">(Kali/Debian)</span></div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">ls</span> /usr/share/john/*2john*</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">… bei Jumbo-Quellinstallation</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">ls</span> /path/to/john/run/*2john*</pre>
+        </div>
+      </div>
+
+      <div class="cmd-row">
+        <div class="cmd-label">Hash aus ZIP-Datei extrahieren</div>
+        <div class="cmd-box">
+          <pre><span class="tok-cmd">zip2john</span> Datei &gt; out.txt</pre>
+        </div>
+      </div>
+
+      <div class="note">Für andere Dateitypen gibt es passende Varianten wie <code>rar2john</code>, <code>pdf2john</code>, <code>office2john</code>, <code>ssh2john</code> usw. Die extrahierte <code>out.txt</code> lässt sich anschließend mit John oder Hashcat knacken.</div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  Cheatsheet für Bildungs- und autorisierte Sicherheitstests. Erstellt aus <code>notes.md</code>. · GitHub-Style, hell & dunkel.
+</footer>
+
+<div id="toast">
+  <svg viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+  <span>In Zwischenablage kopiert</span>
+</div>
+
+<script>
+(function () {
+  var SUN = '<path d="M8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.34 2.34a.75.75 0 011.06 0l1.06 1.06a.75.75 0 01-1.06 1.06L2.34 3.4a.75.75 0 010-1.06zm9.2 9.2a.75.75 0 011.06 0l1.06 1.06a.75.75 0 11-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zM0 8a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5H.75A.75.75 0 010 8zm13 0a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5A.75.75 0 0113 8zM2.34 13.66a.75.75 0 010-1.06l1.06-1.06a.75.75 0 111.06 1.06L3.4 13.66a.75.75 0 01-1.06 0zm9.2-9.2a.75.75 0 010-1.06l1.06-1.06a.75.75 0 111.06 1.06L12.6 4.46a.75.75 0 01-1.06 0z"/>';
+  var MOON = '<path d="M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zM8.234 3.293a6.5 6.5 0 004.474 4.474 4.5 4.5 0 11-4.474-4.474z"/>';
+
+  var root = document.documentElement;
+  var themeIcon = document.getElementById('themeIcon');
+  var themeLabel = document.getElementById('themeLabel');
+
+  function applyTheme(t) {
+    root.setAttribute('data-theme', t);
+    var dark = t === 'dark';
+    themeIcon.innerHTML = dark ? SUN : MOON;
+    themeLabel.textContent = dark ? 'Light' : 'Dark';
+    try { localStorage.setItem('cheatsheet-theme', t); } catch (e) {}
+  }
+  var saved = 'light';
+  try { saved = localStorage.getItem('cheatsheet-theme') || 'light'; } catch (e) {}
+  applyTheme(saved);
+  document.getElementById('themeToggle').addEventListener('click', function () {
+    applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+
+  // Toast
+  var toast = document.getElementById('toast');
+  var toastTimer;
+  function showToast() {
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1600);
+  }
+
+  var COPY_ICON = '<svg viewBox="0 0 16 16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25z"/></svg>';
+  var CHECK_ICON = '<svg viewBox="0 0 16 16"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>';
+
+  // Add copy buttons to every command box
+  document.querySelectorAll('.cmd-box').forEach(function (box) {
+    var pre = box.querySelector('pre');
+    var text = pre.innerText;
+    var btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.type = 'button';
+    btn.innerHTML = COPY_ICON + '<span class="label">Copy</span>';
+    btn.addEventListener('click', function () {
+      var done = function () {
+        btn.classList.add('copied');
+        btn.innerHTML = CHECK_ICON + '<span class="label">Kopiert</span>';
+        showToast();
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          btn.innerHTML = COPY_ICON + '<span class="label">Copy</span>';
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+      } else { fallback(text, done); }
+    });
+    box.appendChild(btn);
+  });
+
+  function fallback(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  // Mobile sidebar
+  var sidebar = document.getElementById('sidebar');
+  document.getElementById('menuBtn').addEventListener('click', function () {
+    sidebar.classList.toggle('open');
+  });
+  sidebar.querySelectorAll('a').forEach(function (a) {
+    a.addEventListener('click', function () { sidebar.classList.remove('open'); });
+  });
+
+  // Scrollspy
+  var links = Array.prototype.slice.call(sidebar.querySelectorAll('a'));
+  var map = {};
+  links.forEach(function (l) { map[l.getAttribute('href').slice(1)] = l; });
+  var targets = links.map(function (l) { return document.getElementById(l.getAttribute('href').slice(1)); }).filter(Boolean);
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        links.forEach(function (l) { l.classList.remove('active'); });
+        if (map[e.target.id]) map[e.target.id].classList.add('active');
+      }
+    });
+  }, { rootMargin: '-72px 0px -70% 0px', threshold: 0 });
+  targets.forEach(function (t) { obs.observe(t); });
+})();
+</script>
+</body>
+</html>
